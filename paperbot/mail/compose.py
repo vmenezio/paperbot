@@ -1,9 +1,10 @@
 import os
 import json
+import regex
+import arrow
 import random
 import mistune
-import arrow
-import regex
+import cssutils
 from collections import namedtuple
 
 DIR = os.path.dirname(__file__)+"/"
@@ -37,9 +38,29 @@ def html_to_text(html):
     eol_tags = regex.compile(r"</p>")
     return strip_tags.sub("", eol_tags.sub("\n", html))
 
-def style(html, style_css): # TODO
+def style(html, style_css):
     """Applies css styles from an external file to an html string inline."""
     styled_html = html
+
+    with open(style_css) as css_file:
+        css = cssutils.parseString(css_file.read())
+
+    styles = {}
+
+    for rule in css:
+        for selector in rule.selectorText.split(", "):
+            for prop in rule.style:
+                try:
+                    styles[selector].append(prop)
+                except KeyError:
+                    styles[selector] = [prop]
+
+    for selector, prop_list in styles.items():
+        inline = " style=\""
+        for prop in prop_list:
+            inline += "{}:{};".format(prop.name, prop.value)
+        inline += "\""
+        styled_html = regex.sub("<"+selector, "<"+selector+inline, styled_html)
 
     return styled_html
 
